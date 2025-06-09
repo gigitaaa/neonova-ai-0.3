@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NeoNova AI</title>
+  <style>
+    :root {
+      --gradient: linear-gradient(135deg, #ff69b4, #8a2be2);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: black;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      transition: background 2s, color 2s;
+    }
+
+    h1 {
+      margin-top: 20px;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      color: transparent;
+      font-size: 2rem;
+    }
+
+    #chat {
+      width: 90%;
+      max-width: 600px;
+      flex-grow: 1;
+      background: rgba(255, 255, 255, 0.07);
+      margin: 20px 0;
+      border-radius: 12px;
+      padding: 15px;
+      overflow-y: auto;
+      border: 2px solid transparent;
+      border-image: var(--gradient) 1;
+    }
+
+    #input-area {
+      display: flex;
+      width: 90%;
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      flex-grow: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      outline: none;
+    }
+
+    button {
+      margin-left: 10px;
+      padding: 10px 15px;
+      font-size: 16px;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .user {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .bot {
+      margin-bottom: 10px;
+      animation: typing 1s steps(30, end);
+    }
+
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+
+    #settingsMenu {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+
+    #menuOptions {
+      display: none;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 10px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+    }
+
+    #profilePic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      cursor: pointer;
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 60px;
+      border: 2px solid white;
+    }
+
+    #signupModal {
+      position: fixed;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      z-index: 1000;
+    }
+
+    #signupModal input {
+      margin: 5px 0;
+      width: 100%;
+    }
+
+    #savedChatsList button {
+      display: block;
+      margin: 5px 0;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 NeoNova AI</h1>
+
+  <img id="profilePic" src="" alt="Profile" onclick="viewSavedChats()">
+
+  <div id="settingsMenu">
+    <button onclick="toggleMenu()">⚙️ Settings</button>
+    <div id="menuOptions">
+      <button onclick="showSignup()">Sign Up</button>
+      <button onclick="viewSavedChats()">Saved Chats</button>
+    </div>
+  </div>
+
+  <div id="chat"></div>
+
+  <div id="input-area">
+    <input id="userInput" type="text" placeholder="Ask me anything..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <div id="signupModal">
+    <input id="username" type="text" placeholder="Username" />
+    <input id="profileUpload" type="file" accept="image/*" />
+    <button onclick="signUp()">Create Account</button>
+  </div>
+
+  <script>
+    const apiKey = "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";
+    const chatBox = document.getElementById("chat");
+    let messageCount = 0;
+    let currentChat = [];
+
+    const savedChats = JSON.parse(localStorage.getItem("neonova_saved") || "[]");
+
+    function toggleMenu() {
+      const menu = document.getElementById("menuOptions");
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+
+    function showSignup() {
+      document.getElementById("signupModal").style.display = "block";
+    }
+
+    function signUp() {
+      const username = document.getElementById("username").value.trim();
+      const fileInput = document.getElementById("profileUpload");
+      if (username && fileInput.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          localStorage.setItem("neonova_user", username);
+          localStorage.setItem("neonova_pic", e.target.result);
+          messageCount = 0;
+          document.getElementById("signupModal").style.display = "none";
+          showProfile();
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      }
+    }
+
+    function showProfile() {
+      const pic = localStorage.getItem("neonova_pic");
+      if (pic) {
+        const img = document.getElementById("profilePic");
+        img.src = pic;
+        img.style.display = "block";
+      }
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("userInput");
+      const message = input.value.trim();
+      if (!message) return;
+
+      const user = localStorage.getItem("neonova_user");
+      if (!user && messageCount >= 5) {
+        alert("⚠️ Limit reached. Sign up for unlimited access.");
+        return;
+      }
+
+      input.value = "";
+      chatBox.innerHTML += `<div class="user">You: ${message}</div>`;
+      chatBox.innerHTML += `<div class="bot">NeoNova: ...</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+      if (!user) messageCount++;
+
+      currentChat.push({ role: "user", content: message });
+
+      fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-3.5-turbo",
+          messages: [
+            { role: "system", content: "You are NeoNova AI, a helpful assistant." },
+            ...currentChat
+          ]
+        })
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        const reply = data?.choices?.[0]?.message?.content || "⚠️ Error: Unexpected response.";
+        const botElements = document.querySelectorAll(".bot");
+        botElements[botElements.length - 1].innerText = "NeoNova: " + reply;
+        currentChat.push({ role: "assistant", content: reply });
+        chatBox.scrollTop = chatBox.scrollHeight;
+        saveCurrentChat();
+      })
+      .catch(() => {
+        const botElements = document.querySelectorAll(".bot");
+        botElements[botElements.length - 1].innerText = "NeoNova: ⚠️ Error contacting AI.";
+      });
+    }
+
+    function saveCurrentChat() {
+      const timestamp = new Date().toLocaleString();
+      savedChats.push({ time: timestamp, messages: currentChat });
+      localStorage.setItem("neonova_saved", JSON.stringify(savedChats));
+    }
+
+    function viewSavedChats() {
+      const list = savedChats.map((chat, i) => {
+        return `<button onclick="loadChat(${i})">${chat.time}</button>`;
+      }).join('');
+      const container = document.createElement("div");
+      container.id = "savedChatsList";
+      container.innerHTML = list;
+      chatBox.innerHTML = "";
+      chatBox.appendChild(container);
+    }
+
+    function loadChat(index) {
+      const selected = savedChats[index];
+      currentChat = selected.messages;
+      chatBox.innerHTML = selected.messages.map((msg) => {
+        return `<div class="${msg.role === 'user' ? 'user' : 'bot'}">${msg.role === 'user' ? 'You' : 'NeoNova'}: ${msg.content}</div>`;
+      }).join('');
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    setInterval(() => {
+      const bg = document.body.style.background;
+      const next = bg === 'white' ? 'black' : 'white';
+      document.body.style.background = next;
+      document.body.style.color = next === 'white' ? 'black' : 'white';
+    }, 8000);
+
+    showProfile();
+  </script>
+</body>
+</html>
+
+
